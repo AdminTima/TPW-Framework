@@ -9,6 +9,11 @@ def home(request):
     return "Hello home page"
 
 
+@app.route("/hello/{name}")
+def hello(request, name):
+    return f"Hello {name}"
+
+
 @app.route("/about")
 def about(request):
     return "Hello about page"

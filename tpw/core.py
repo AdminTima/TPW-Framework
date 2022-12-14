@@ -1,4 +1,5 @@
 from webob import Request, Response
+from parse import parse
 
 
 class Tpw:
@@ -13,18 +14,21 @@ class Tpw:
 
     def handle_request(self, request):
         response = Response()
-        handler = self.find_handler(request.path)
+        handler, kwargs = self.find_handler(request.path)
 
         if handler is None:
             return self.not_found_response(response)
 
-        response.text = handler(request)
+        response.text = handler(request, **kwargs)
         return response
 
     def find_handler(self, request_path):
         for path, handler in self.__routes.items():
-            if path == request_path:
-                return handler
+            parsed_result = parse(path, request_path)
+            if parsed_result:
+                return handler, parsed_result.named
+
+        return None, None
 
     def route(self, path):
         def wrapper(handler):
