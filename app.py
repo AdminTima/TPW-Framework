@@ -19,5 +19,18 @@ def about(request):
     return "Hello about page"
 
 
+@app.route("/class")
+class ClassBased:
+    def get(self, request):
+        return "Class based view works!!!!"
+
+
+def dj_like(request):
+    return "Route like django"
+
+
+app.add_route("/dj", dj_like)
+
+
 if __name__ == "__main__":
     serve(app)

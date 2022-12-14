@@ -1,5 +1,6 @@
 from webob import Request, Response
 from parse import parse
+import inspect
 
 
 class Tpw:
@@ -19,6 +20,12 @@ class Tpw:
         if handler is None:
             return self.not_found_response(response)
 
+        if inspect.isclass(handler):
+            req_method = request.method.lower()
+            handler = getattr(handler(), req_method, None)
+            if not handler:
+                raise Exception("Method not allowed.")
+
         response.text = handler(request, **kwargs)
         return response
 
@@ -31,11 +38,18 @@ class Tpw:
         return None, None
 
     def route(self, path):
+
         def wrapper(handler):
-            self.__routes[path] = handler
+            self.add_route(path, handler)
             print(self.__routes)
             return handler
         return wrapper
+
+    def add_route(self, path, handler):
+        if path in self.__routes:
+            raise Exception(f"Route {path} is already registered!")
+        self.__routes[path] = handler
+
 
     def not_found_response(self, response):
         response.text = "Not found page"
