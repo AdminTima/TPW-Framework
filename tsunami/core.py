@@ -2,19 +2,26 @@ from webob import Request, Response
 from parse import parse
 import inspect
 import os
-from jinja2 import Environment, PackageLoader, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader
+from whitenoise import WhiteNoise
 
 
 class Tsunami:
 
-    def __init__(self, templates_dir="templates"):
+    def __init__(self, templates_dir="templates", static_dir=None):
         self.__routes = {}
         self.template_env = Environment(loader=FileSystemLoader(os.path.abspath(templates_dir)))
+        self.static_dir = static_dir
 
-    def __call__(self, environ, start_response):
+    def __wsgi_app(self, environ, start_response):
         request = Request(environ)
         response = self.handle_request(request)
         return response(environ, start_response)
+
+    def __call__(self, environ, start_response):
+        if self.static_dir:
+            return WhiteNoise(self.__wsgi_app, root=self.static_dir)(environ, start_response)
+        return self.__wsgi_app(environ, start_response)
 
     def handle_request(self, request):
         response = Response()

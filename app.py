@@ -1,7 +1,7 @@
 from waitress import serve
 from tsunami.core import Tsunami
 
-app = Tsunami()
+app = Tsunami(static_dir="static")
 
 
 @app.route("/")
