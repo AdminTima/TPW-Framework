@@ -1,12 +1,15 @@
 from webob import Request, Response
 from parse import parse
 import inspect
+import os
+from jinja2 import Environment, PackageLoader, FileSystemLoader
 
 
 class Tsunami:
 
-    def __init__(self):
+    def __init__(self, templates_dir="templates"):
         self.__routes = {}
+        self.template_env = Environment(loader=FileSystemLoader(os.path.abspath(templates_dir)))
 
     def __call__(self, environ, start_response):
         request = Request(environ)
@@ -26,7 +29,7 @@ class Tsunami:
             if not handler:
                 raise Exception("Method not allowed.")
 
-        response.text = handler(request, **kwargs)
+        response = handler(request, response, **kwargs)
         return response
 
     def find_handler(self, request_path):
@@ -50,10 +53,18 @@ class Tsunami:
             raise Exception(f"Route {path} is already registered!")
         self.__routes[path] = handler
 
-
     def not_found_response(self, response):
         response.text = "Not found page"
         response.status_code = 404
         return response
+
+    def render_template(self, template_name, context=None):
+        if context is None:
+            context = {}
+        template = self.template_env.get_template(template_name)
+        print(template)
+        return template.render(**context).encode("utf-8")
+
+
 
 
