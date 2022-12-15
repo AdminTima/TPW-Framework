@@ -1,7 +1,7 @@
 from waitress import serve
-from tpw.core import Tpw
+from tsunami.core import Tsunami
 
-app = Tpw()
+app = Tsunami()
 
 
 @app.route("/")

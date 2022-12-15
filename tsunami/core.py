@@ -3,7 +3,7 @@ from parse import parse
 import inspect
 
 
-class Tpw:
+class Tsunami:
 
     def __init__(self):
         self.__routes = {}
