@@ -12,6 +12,7 @@ class Tsunami:
         self.__routes = {}
         self.template_env = Environment(loader=FileSystemLoader(os.path.abspath(templates_dir)))
         self.static_dir = static_dir
+        self.white_noise = WhiteNoise(self.__wsgi_app, root=static_dir)
 
     def __wsgi_app(self, environ, start_response):
         request = Request(environ)
@@ -19,13 +20,17 @@ class Tsunami:
         return response(environ, start_response)
 
     def __call__(self, environ, start_response):
-        if self.static_dir:
-            return WhiteNoise(self.__wsgi_app, root=self.static_dir)(environ, start_response)
+        path_info: str = environ["PATH_INFO"]
+        if path_info.startswith("/static"):
+            environ["PATH_INFO"] = path_info[len("/static"):]
+            if self.static_dir:
+                return self.white_noise(environ, start_response)
+            raise Exception("You have not provided static directory")
         return self.__wsgi_app(environ, start_response)
 
     def handle_request(self, request):
         response = Response()
-        handler, kwargs = self.find_handler(request.path)
+        handler, kwargs = self.find_handler(request.path, request.method)
 
         if handler is None:
             return self.not_found_response(response)
@@ -39,26 +44,32 @@ class Tsunami:
         response = handler(request, response, **kwargs)
         return response
 
-    def find_handler(self, request_path):
-        for path, handler in self.__routes.items():
+    def find_handler(self, request_path, request_method):
+        for path in self.__routes:
             parsed_result = parse(path, request_path)
             if parsed_result:
-                return handler, parsed_result.named
+                route_handler_data = self.__routes[path]
+                if request_method in route_handler_data["methods"]:
+                    return route_handler_data["handler"], parsed_result.named
+                return self.__method_not_allowed, dict()
 
         return None, None
 
-    def route(self, path):
+    def route(self, path, methods=None):
 
         def wrapper(handler):
-            self.add_route(path, handler)
+            self.add_route(path, handler, methods)
             print(self.__routes)
             return handler
         return wrapper
 
-    def add_route(self, path, handler):
+    def add_route(self, path, handler, methods=None):
         if path in self.__routes:
             raise Exception(f"Route {path} is already registered!")
-        self.__routes[path] = handler
+        if methods is None:
+            methods = ["GET"]
+        new_route = {"handler": handler, "methods": methods}
+        self.__routes[path] = new_route
 
     def not_found_response(self, response):
         response.text = "Not found page"
@@ -71,6 +82,11 @@ class Tsunami:
         template = self.template_env.get_template(template_name)
         print(template)
         return template.render(**context).encode("utf-8")
+
+    def __method_not_allowed(self,request, response):
+        response.text = "Method not allowed."
+        response.status_code = 405
+        return response
 
 
 
