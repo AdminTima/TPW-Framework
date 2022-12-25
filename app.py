@@ -1,7 +1,14 @@
 from waitress import serve
-from tsunami.core import Tsunami
+from tsunami.core import Tsunami, Router
 
 app = Tsunami(static_dir="static")
+router = Router()
+
+
+@router.route("/router-test")
+def router_test(req, res):
+    res.text = "Router is working ......!!!!!"
+    return res
 
 
 @app.route("/")
@@ -41,7 +48,8 @@ def template_test(request, response):
 
 
 app.add_route("/dj", dj_like)
+app.include_router(router)
 
 
 if __name__ == "__main__":
-    serve(app)
+    app.run()

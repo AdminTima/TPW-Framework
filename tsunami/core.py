@@ -4,12 +4,39 @@ import inspect
 import os
 from jinja2 import Environment, FileSystemLoader
 from whitenoise import WhiteNoise
+from waitress import serve
 
 
-class Tsunami:
+class BaseApp:
+
+    def __init__(self):
+        self._routes = {}
+
+    def route(self, path, methods=None):
+        def wrapper(handler):
+            self.add_route(path, handler, methods)
+            print(self._routes)
+            return handler
+
+        return wrapper
+
+    def add_route(self, path, handler, methods=None):
+        if path in self._routes:
+            raise Exception(f"Route {path} is already registered!")
+        if methods is None:
+            methods = ["GET"]
+        new_route = {"handler": handler, "methods": methods}
+        self._routes[path] = new_route
+
+    @property
+    def routes(self):
+        return self._routes
+
+
+class Tsunami(BaseApp):
 
     def __init__(self, templates_dir="templates", static_dir=None):
-        self.__routes = {}
+        super().__init__()
         self.template_env = Environment(loader=FileSystemLoader(os.path.abspath(templates_dir)))
         self.static_dir = static_dir
         self.white_noise = WhiteNoise(self.__wsgi_app, root=static_dir)
@@ -45,31 +72,15 @@ class Tsunami:
         return response
 
     def find_handler(self, request_path, request_method):
-        for path in self.__routes:
+        for path in self._routes:
             parsed_result = parse(path, request_path)
             if parsed_result:
-                route_handler_data = self.__routes[path]
+                route_handler_data = self._routes[path]
                 if request_method in route_handler_data["methods"]:
                     return route_handler_data["handler"], parsed_result.named
                 return self.__method_not_allowed, dict()
 
         return None, None
-
-    def route(self, path, methods=None):
-
-        def wrapper(handler):
-            self.add_route(path, handler, methods)
-            print(self.__routes)
-            return handler
-        return wrapper
-
-    def add_route(self, path, handler, methods=None):
-        if path in self.__routes:
-            raise Exception(f"Route {path} is already registered!")
-        if methods is None:
-            methods = ["GET"]
-        new_route = {"handler": handler, "methods": methods}
-        self.__routes[path] = new_route
 
     def not_found_response(self, response):
         response.text = "Not found page"
@@ -88,6 +99,17 @@ class Tsunami:
         response.status_code = 405
         return response
 
+    def include_router(self, router):
+        if not isinstance(router, Router):
+            raise Exception("Router has to be an instance of Router class")
+        self._routes.update(router.routes)
+        print(self._routes)
+
+    def run(self):
+        serve(self)
 
 
+
+class Router(BaseApp):
+    pass
 
