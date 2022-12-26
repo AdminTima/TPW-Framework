@@ -1,8 +1,7 @@
-from waitress import serve
 from tsunami.core import Tsunami, Router
 
 app = Tsunami(static_dir="static")
-router = Router()
+router = Router(prefix="/auth")
 
 
 @router.route("/router-test")

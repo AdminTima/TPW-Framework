@@ -109,7 +109,13 @@ class Tsunami(BaseApp):
         serve(self)
 
 
-
 class Router(BaseApp):
-    pass
+    def __init__(self, prefix=None):
+        self.prefix = prefix
+        super().__init__()
+
+    def route(self, path, methods=None):
+        if self.prefix:
+            path = f"{self.prefix}{path}"
+        return super().route(path, methods)
 
